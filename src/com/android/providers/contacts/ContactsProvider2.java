@@ -1954,6 +1954,10 @@ public class ContactsProvider2 extends AbstractContactsProvider
         // Enforce stream items access check if applicable.
         enforceSocialStreamWritePermission(uri);
 
+        if (getContext().isPrivacyGuardEnabled()) {
+            return null;
+        }
+
         if (mapsToProfileDbWithInsertedValues(uri, values)) {
             switchToProfileMode();
             return mProfileProvider.insert(uri, values);
@@ -1978,6 +1982,10 @@ public class ContactsProvider2 extends AbstractContactsProvider
         // Enforce stream items access check if applicable.
         enforceSocialStreamWritePermission(uri);
 
+        if (getContext().isPrivacyGuardEnabled()) {
+            return 0;
+        }
+
         if (mapsToProfileDb(uri)) {
             switchToProfileMode();
             return mProfileProvider.update(uri, values, selection, selectionArgs);
@@ -1993,6 +2001,10 @@ public class ContactsProvider2 extends AbstractContactsProvider
 
         // Enforce stream items access check if applicable.
         enforceSocialStreamWritePermission(uri);
+
+        if (getContext().isPrivacyGuardEnabled()) {
+            return 0;
+        }
 
         if (mapsToProfileDb(uri)) {
             switchToProfileMode();
@@ -4755,6 +4767,21 @@ public class ContactsProvider2 extends AbstractContactsProvider
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
             String sortOrder, CancellationSignal cancellationSignal) {
+        Cursor c = queryInternal(uri, projection, selection, selectionArgs,
+                sortOrder, cancellationSignal);
+
+        if (getContext().isPrivacyGuardEnabled()) {
+            Log.d(TAG, "Contacts query from application with privacy guard! pid=" + Binder.getCallingPid());
+            MemoryCursor mc = new MemoryCursor(null, c.getColumnNames());
+            c.close();
+            return mc;
+        }
+
+        return c;
+    }
+
+    private Cursor queryInternal(Uri uri, String[] projection, String selection, String[] selectionArgs,
+                String sortOrder, CancellationSignal cancellationSignal) {
         if (VERBOSE_LOGGING) {
             Log.v(TAG, "query: uri=" + uri + "  projection=" + Arrays.toString(projection) +
                     "  selection=[" + selection + "]  args=" + Arrays.toString(selectionArgs) +
